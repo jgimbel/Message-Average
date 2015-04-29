@@ -57,15 +57,16 @@ public class MedianStdDev {
 
         public void reduce(Text key, Iterable < Message > values,Context context)
                 throws IOException, InterruptedException {
-
-            LinkedList<Long> responses = new LinkedList<Long>();
+            
             String s = "";
             Message lastTime = values.iterator().next();
             int c = 0;
+            long sum = 0L;
             for(Message v: values){
                 if(v.getType() != lastTime.getType()) {
-                    responses.add(v.getDate() - lastTime.getDate());
+                    sum += v.getDate() - lastTime.getDate();
                 }
+
                 java.util.Date time=new java.util.Date(v.getDate());
                 java.util.Date time2=new java.util.Date(lastTime.getDate());
                 s += "\n" + time.toString() + "\t" + time2.toString();
@@ -76,19 +77,12 @@ public class MedianStdDev {
             s += "\n" + c;
 
 
-            long sum = 0L;
-            int count = 0;
-            for(long r : responses){
-                sum += r;
-                count++;
-            }
-
             LongWritable average = new LongWritable();
             Text t = new Text(s);
-            if(count == 0){
+            if(c == 0){
                 return;
             }
-            average.set(sum / count);
+            average.set(sum / c);
             //context.write(key, average);
             context.write(key, t);
         }
