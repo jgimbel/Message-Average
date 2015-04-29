@@ -63,7 +63,7 @@ public class MedianStdDev {
             Message lastTime = values.iterator().next();
             int c = 0;
             for(Message v: values){
-                if(v.getType() != lastTime.getDate()) {
+                if(v.getType() != lastTime.getType()) {
                     responses.add(v.getDate() - lastTime.getDate());
                 }
                 java.util.Date time=new java.util.Date(v.getDate());
