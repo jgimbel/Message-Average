@@ -52,43 +52,50 @@ public class MedianStdDev {
     }
 
     public static class MedianStdDevReducer extends
-            //Reducer < Text, Message, Text, LongWritable > {
-            Reducer < Text, Message, Text, Text > {
+            Reducer < Text, Message, Text, LongWritable > {
+            //Reducer < Text, Message, Text, Text > {
 
         public void reduce(Text key, Iterable < Message > values,Context context)
                 throws IOException, InterruptedException {
-            
+
             String s = "";
-            Message lastTime = values.iterator().next();
             int c = 0;
             long sum = 0L;
-            for(Message v: values){
-                if(v.getType() != lastTime.getType()) {
-                    sum += v.getDate() - lastTime.getDate();
+            Message lastTime = new Message();
+            try {
+                lastTime = (Message) values.iterator().next().clone();
+            }catch(Exception e){
+                System.out.println(e.getStackTrace());
+            }
+            Message me;
+            Iterator<Message> i = values.iterator();
+            while(i.hasNext()){
+                me = i.next();
+                s += "\n" + lastTime.getType() + "\t" + me.getType();
+                try {
+                    lastTime = (Message) values.iterator().next().clone();
+                }catch(Exception e){
+                    System.out.println(e.getStackTrace());
                 }
-
-                java.util.Date time=new java.util.Date(v.getDate());
-                java.util.Date time2=new java.util.Date(lastTime.getDate());
-                s += "\n" + time.toString() + "\t" + time2.toString();
-                lastTime.setDate(v.getDate());
-                lastTime.setType(v.getType());
+                if(lastTime.getType() != me.getType()){
+                    sum += me.getDate() - lastTime.getDate();
+                }
                 c++;
             }
             s += "\n" + c;
 
 
             LongWritable average = new LongWritable();
-            Text t = new Text(s);
             if(c == 0){
                 return;
             }
             average.set(sum / c);
-            //context.write(key, average);
-            context.write(key, t);
+            context.write(key, average);
+//            context.write(key, new Text(s));
         }
     }
 
-    public static class Message implements WritableComparable<Message>, Comparator<Message> {
+    public static class Message implements WritableComparable<Message>, Comparator<Message>, Cloneable {
         int type = 0;
         long date = 0L;
 
@@ -120,11 +127,18 @@ public class MedianStdDev {
             return Integer.toString(type) + Long.toString(date);
         }
 
+
+        protected Object clone() throws CloneNotSupportedException {
+
+            Message clone=(Message)super.clone();
+            return clone;
+
+        }
+
         public int compareTo(Message e2) {
             int c = Long.compare(this.getDate(), e2.getDate());
             return c == 0 ? Integer.compare(this.getType(), e2.getType()) : c;
         }
-
 
         public int compare(Message e1, Message e2) {
             int c = Long.compare(e1.getDate(), e2.getDate());
@@ -160,7 +174,7 @@ public class MedianStdDev {
             System.exit(2);
         }
 
-        Job job = new Job(conf, "Getting Average Response time of text messages");
+        Job job = Job.getInstance(conf, "Getting Average Response time of text messages");
         job.setJarByClass(MedianStdDev.class);
         job.setMapperClass(MedianStdDevMapper.class);
         job.setReducerClass(MedianStdDevReducer.class);
