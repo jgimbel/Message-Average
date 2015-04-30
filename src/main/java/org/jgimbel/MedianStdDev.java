@@ -4,12 +4,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 
 import java.util.*;
-import java.lang.Long;
 
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
@@ -45,22 +44,22 @@ public class MedianStdDev {
 
             person.set(text);
             outmsg.setType(Integer.parseInt(type));
-            outmsg.setDate(Long.parseLong(strDate));
+            outmsg.setDate(Double.parseDouble(strDate));
 
             context.write(person, outmsg);
         }
     }
 
     public static class MedianStdDevReducer extends
-            Reducer < Text, Message, Text, LongWritable > {
-            //Reducer < Text, Message, Text, Text > {
+//            Reducer < Text, Message, Text, DoubleWritable > {
+            Reducer < Text, Message, Text, Text > {
 
         public void reduce(Text key, Iterable < Message > values,Context context)
                 throws IOException, InterruptedException {
 
             String s = "";
-            int c = 0;
-            long sum = 0L;
+            double c = 0;
+            double sum = 0L;
             Message lastTime = new Message();
             try {
                 lastTime = (Message) values.iterator().next().clone();
@@ -71,52 +70,53 @@ public class MedianStdDev {
             Iterator<Message> i = values.iterator();
             while(i.hasNext()){
                 me = i.next();
-                s += "\n" + lastTime.getType() + "\t" + me.getType();
+                s += "\n" + lastTime.getDate() + "\t" + me.getDate();
+
                 try {
                     lastTime = (Message) values.iterator().next().clone();
-                }catch(Exception e){
-                    System.out.println(e.getStackTrace());
-                }
+                }catch(Exception e){ System.out.println(e.getStackTrace()); }
+
                 if(lastTime.getType() != me.getType()){
                     sum += me.getDate() - lastTime.getDate();
                 }
                 c++;
             }
-            s += "\n" + c;
+            //s += "\n" + c;
 
 
-            LongWritable average = new LongWritable();
-            if(c == 0){
-                return;
-            }
-            average.set(sum / c);
-            context.write(key, average);
-//            context.write(key, new Text(s));
+            DoubleWritable average = new DoubleWritable();
+//            if(c == 0){
+//                return;
+//            }
+//            average.set(sum / c);
+//            context.write(key, average);
+            s = "\n" + sum + "/" + c;
+            context.write(key, new Text(s));
         }
     }
 
     public static class Message implements WritableComparable<Message>, Comparator<Message>, Cloneable {
         int type = 0;
-        long date = 0L;
+        double date = 0L;
 
         public Message() { }
         public Message(int t){ setType(t);}
-        public Message(long d) { setDate(d);}
-        public Message(int t, long d){setType(t); setDate(d);}
+        public Message(double d) { setDate(d);}
+        public Message(int t, double d){setType(t); setDate(d);}
         public void setType(int t){ type = t; }
-        public void setDate(long d){ date = d; }
+        public void setDate(double d){ date = d; }
 
         public int getType(){ return this.type; }
-        public long getDate(){ return this.date; }
+        public double getDate(){ return this.date; }
 
         public void readFields(DataInput in) throws IOException {
             type = in.readInt();
-            date = in.readLong();
+            date = in.readDouble();
         }
 
         public void write(DataOutput out) throws IOException{
             out.writeInt(type);
-            out.writeLong(date);
+            out.writeDouble(date);
         }
 
         public int hashCode() {
@@ -124,7 +124,7 @@ public class MedianStdDev {
         }
 
         public String toString() {
-            return Integer.toString(type) + Long.toString(date);
+            return Integer.toString(type) + Double.toString(date);
         }
 
 
@@ -136,12 +136,12 @@ public class MedianStdDev {
         }
 
         public int compareTo(Message e2) {
-            int c = Long.compare(this.getDate(), e2.getDate());
+            int c = Double.compare(this.getDate(), e2.getDate());
             return c == 0 ? Integer.compare(this.getType(), e2.getType()) : c;
         }
 
         public int compare(Message e1, Message e2) {
-            int c = Long.compare(e1.getDate(), e2.getDate());
+            int c = Double.compare(e1.getDate(), e2.getDate());
             return c == 0 ? Integer.compare(e1.getType(), e2.getType()) : c;
         }
 
